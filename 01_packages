@@ -1,0 +1,21 @@
+R/
+pkgs <- c(
+  "readxl",
+  "dplyr",
+  "stringr",
+  "tibble",
+  "tidyr",
+  "purrr",
+  "brms",
+  "bayestestR",
+  "ggplot2",
+  "patchwork",
+  "scales",
+  "ggdiagram",
+  "geomtextpath"
+)
+
+new_pkgs <- pkgs[!pkgs %in% rownames(installed.packages())]
+if (length(new_pkgs)) install.packages(new_pkgs)
+
+invisible(lapply(pkgs, library, character.only = TRUE))
