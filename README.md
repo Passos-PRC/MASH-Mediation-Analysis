@@ -1,4 +1,4 @@
-# Bayesian Causal Mediation Analysis — MASH Drug Trials
+# Bayesian Causal Mediation Analysis - MASH Drug Trials
 
 This repository contains the analysis pipeline for a Bayesian causal mediation analysis of MASH/NASH clinical trials, investigating whether weight loss accounts for the histologic benefits of antifibrotic and metabolic therapies. It constructs treatment–placebo contrasts from extracted trial data and fits `brms`-based Bayesian random-effects models to decompose total effects into indirect (weight-mediated) and direct (weight-independent) components. Bayes Factors via the Savage–Dickey ratio are computed for each path.
 
@@ -52,8 +52,8 @@ This will produce `output/FOREST_WEIGHT_PO1.pdf`, `output/BUBBLE_WEIGHT_PO1.pdf`
 
 The analysis follows the product-of-coefficients approach:
 
-- **a-path**: treatment → mediator effect, estimated per subgroup via a Normal–Normal conjugate Bayesian random-effects model using the within-study mediator contrast (active minus placebo).
-- **b-path**: mediator → outcome slope, estimated globally via `brms` MCMC with a within–between decomposition (`wt_within` = arm deviation from study mean; `wt_mean` = study-level mediator mean) to avoid ecological confounding.
+- **a-path**: treatment / mediator effect, estimated per subgroup via a Normal–Normal conjugate Bayesian random-effects model using the within-study mediator contrast (active minus placebo).
+- **b-path**: mediator / outcome slope, estimated globally via `brms` MCMC with a within–between decomposition (`wt_within` = arm deviation from study mean; `wt_mean` = study-level mediator mean) to avoid ecological confounding.
 - **Indirect effect**: posterior product `a × b`, propagated via Monte Carlo draws.
 - **Direct effect**: total effect − indirect effect.
 - **Proportion mediated**: indirect / total, clipped to [0, 1] per draw.
