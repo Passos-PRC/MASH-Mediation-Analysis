@@ -9,7 +9,7 @@ data/raw/MEDIATORS_DATA_EXTRACTION.xlsx
 data/raw/NITS_AS_SURROGATE_DATA_EXTRACTION.xlsx   # MRI-PDFF sheet
 ```
 
-A synthetic template (`MEDIATORS_SYNTHETIC.xlsx`) is included in this folder for transparency and reproducibility testing. It mirrors the required column structure but contains no real patient data.
+A synthetic template (`MEDIATORS_SYNTHETIC.xlsx`) is included in this folder for reproducibility testing. It mirrors the required column structure but contains no real data.
 
 ---
 
