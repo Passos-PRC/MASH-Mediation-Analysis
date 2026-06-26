@@ -1,97 +1,76 @@
-# Bayesian Causal Mediation Analysis - MASH Drug Trials
+# data/
 
-This repository contains the analysis pipeline for a Bayesian causal mediation analysis of MASH clinical trials, investigating whether weight loss accounts for the histologic benefits of antifibrotic and metabolic therapies. It constructs treatment–placebo contrasts from extracted trial data and fits `brms`-based Bayesian random-effects models to decompose total effects into indirect (weight-mediated) and direct (weight-independent) components. Bayes Factors via the Savage–Dickey ratio are computed for each path.
+## Overview
+
+Place your raw extraction spreadsheet here as:
+
+```
+data/raw/MEDIATORS_DATA_EXTRACTION.xlsx
+data/raw/NITS_AS_SURROGATE_DATA_EXTRACTION.xlsx   # MRI-PDFF sheet
+```
+
+A synthetic template (`MEDIATORS_SYNTHETIC.xlsx`) is included in this folder for transparency and reproducibility testing. It mirrors the required column structure but contains no real patient data.
 
 ---
 
-## Repository structure
+## Required sheets and columns
 
-```
-data/
-  README.md                      column layout and SD harmonisation rules
-  raw/                           place extraction spreadsheets here (git-ignored)
+### Sheet: `Weight` (and `HOMA-IR`)
 
-R/
-  01_packages.R                  install and load all dependencies
-  02_functions.R                 all analytic and plotting helpers
-  03_example_weight_po1.R        end-to-end example: weight mediating PO1
+| Column | Description |
+|--------|-------------|
+| `STUDY` | Trial identifier (must match `study_id` in `R/02_study_metadata.R`) |
+| `ARM` | Treatment arm label (used for drug-class classification) |
+| `n(PO1)` | Sample size for primary outcome 1 |
+| `n(PO2)` | Sample size for primary outcome 2 |
+| `PO1` | Event rate (%) for outcome 1 |
+| `PO2` | Event rate (%) for outcome 2 |
+| `BASELINE WEIGHT (SD)` | Baseline value in format `mean (SD)`, e.g. `"106 (21.5)"` |
+| `CHANGE AS REPORTED` | Reported change, format varies by type column |
+| `HOW IS CHANGE DATA REPORTED?` | One of: `CHANGE FROM BASELINE WITH SD`, `CHANGE FROM BASELINE WITH SE`, `CHANGE FROM BASELINE WITHOUT SD`, `MEAN DIFFERENCE WITH SD`, `LEAST SQUARE MEAN WITH 95% CI`, etc. |
 
-output/                          generated files (git-ignored)
-```
+### Sheet: `NIT = MRI-PDFF`
 
----
-
-## How to run
-
-1. **Install system dependency**: Stan requires a working C++ toolchain. See [mc-stan.org](https://mc-stan.org/users/interfaces/rstan).
-
-2. **Place your data** in `data/raw/` following the column layout in `data/README.md`, or use the synthetic template.
-
-3. **Set paths** via environment variables before running (or edit the defaults in the script):
-
-```r
-Sys.setenv(
-  MEDIATOR_EXTRACTION_PATH = "data/raw/MEDIATORS_DATA_EXTRACTION.xlsx",
-  MEDIATOR_OUTPUT_DIR      = "output"
-)
-```
-
-4. **Run the example**:
-
-```r
-source("R/03_example_weight_po1.R")
-```
-
-This will produce `output/FOREST_WEIGHT_PO1.pdf`, `output/BUBBLE_WEIGHT_PO1.pdf`, and `output/mediation_weight_po1.csv`. The fitted Stan model is cached to disk so re-runs are instant.
+| Column | Description |
+|--------|-------------|
+| `STUDY`, `ARM` | As above |
+| `n(PO1)`, `n(PO2)` | Sample sizes |
+| `PO1 (%)`, `PO2 (%)` | Event rates |
+| `n(NIT)` | Sample size for the NIT sub-study |
+| `BASELINE NIT (MEAN, SD)` | Format `mean (SD)` |
+| `FINAL NIT (MEAN, SD)` | Format `mean (SD)` |
+| `CHANGE AS REPORTED` | Reported change (SD or CI format) |
+| `NIT CFB (%; MEAN)` | Directly reported % change from baseline (if available) |
+| `SD OF CFB` | Directly reported SD of CFB (if available) |
 
 ---
 
-## Model description
+## SD harmonisation hierarchy
 
-### Mediation framework
+For Weight and HOMA-IR sheets:
+1. Directly reported SD (`WITH SD`)
+2. SE × √n (`WITH SE`)
+3. (CI_upper − CI_lower) / (2 × 1.96) × √n (`WITH 95% CI`)
+4. Mean imputation of all available SDs (flagged as `imputed` in `SD_CFB_source`)
 
-The analysis follows the product-of-coefficients approach:
+For the MRI-PDFF sheet (Cochrane paired-measurement formula):
+1. √(SD_baseline² + SD_final² − 2ρ·SD_baseline·SD_final), default ρ = 0.5
+2. Reported change SD
+3. CI → SE → SD
+4. Mean imputation
 
-- **a-path**: treatment to mediator effect, estimated per subgroup via a Normal–Normal conjugate Bayesian random-effects model using the within-study mediator contrast (active minus placebo).
-- **b-path**: mediator to outcome slope, estimated globally via `brms` MCMC with a within–between decomposition (`wt_within` = arm deviation from study mean; `wt_mean` = study-level mediator mean) to avoid ecological confounding.
-- **Indirect effect**: posterior product `a × b`, propagated via Monte Carlo draws.
-- **Direct effect**: total effect − indirect effect.
-- **Proportion mediated**: indirect / total, clipped to [0, 1] per draw.
-
-### b-path formula
-
-```
-rd_resp | se(sqrt(var_rd_resp)) ~ wt_within + drug_class + wt_mean + (1 | study_id)
-```
-
-`rd_resp` is the arm-level absolute risk difference for the histologic endpoint; `var_rd_resp` is its within-arm variance (treated as known). The random intercept captures residual between-study heterogeneity.
-
-### Priors
-
-| Parameter | Prior |
-|-----------|-------|
-| Regression slopes | Normal(0, 0.5) |
-| Intercept | Normal(0, 0.5) |
-| Random-effect SD | Normal(0, 0.25) |
-
-### Bayes Factors
-
-BF₁₀ values are computed via the Savage–Dickey density ratio using a KDE of the posterior draws evaluated at zero. For indirect effects, a product-of-normals prior is used as the reference.
+Absolute changes are converted to % CFB via `(change / baseline_mean) × 100`.
 
 ---
 
-## Outputs
+## Output files (git-ignored)
+
+After running the analysis scripts, `output/` will contain:
 
 | File | Description |
 |------|-------------|
-| `FOREST_WEIGHT_PO1.pdf` | Forest plot + proportion-mediated panel |
-| `BUBBLE_WEIGHT_PO1.pdf` | Trial-level scatter (weight loss vs. response) |
-| `mediation_weight_po1.csv` | Full mediation table with 95% CrI and BF₁₀ |
-
----
-
-## Citation
-
-Please cite the final paper when using this code. If you adapt it for derivative analyses, consider linking back to this repository.
-
----
+| `mediation_all_results.csv` | Full mediation table across all datasets × endpoints |
+| `bpath_by_class_all.csv` | Per-drug-class b-path slopes (interaction model) |
+| `FOREST_*.pdf` | Forest + proportion-mediated panel plots |
+| `BUBBLE_*.pdf` | Trial-level scatter plots (weight loss vs. response) |
+| `bfit_*_cache.*` | Cached `brms` model objects (Stan compiled fits) |
