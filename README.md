@@ -95,7 +95,3 @@ BF₁₀ values are computed via the Savage–Dickey density ratio using a KDE o
 Please cite the final paper when using this code. If you adapt it for derivative analyses, consider linking back to this repository.
 
 ---
-
-## License
-
-Code released under the MIT License. The synthetic data template is provided for reproducibility only and does not represent real patient data.
